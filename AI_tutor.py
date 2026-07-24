@@ -300,7 +300,7 @@ def run_agent(history):
 
     while True:
 
-        max_retry = 10
+        max_retry = 5
         for attempt in range(max_retry):
             try:
                 # ---------------------------------

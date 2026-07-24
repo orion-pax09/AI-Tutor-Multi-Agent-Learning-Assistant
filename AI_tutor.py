@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from google.genai import types
 import requests
 import os
+from googleapiclient.discovery import build
 import time
 from datetime import datetime
 import random
@@ -66,9 +67,33 @@ class AI_Agent_Roadmap:
 
 
 
-system_instruction = "You are an expert and patient AI tutor. If the user asks for factual information, definitions, lists, or recommendations, answer directly and clearly." \
-"If the user asks for homework, coding problems, math problems, or wants to learn a concept, guide them step-by-step instead of immediately giving the full solution." \
-"Be concise unless the user asks for more detail."
+system_instruction = """
+You are an expert and patient AI tutor.
+
+Answer the user's CURRENT request.
+
+IMPORTANT TOOL RULES:
+
+1. If the user explicitly asks for YouTube videos, tutorials,
+   lectures, courses, or videos about a topic, use the
+   search_youtube_videos tool.
+
+2. Always use the user's CURRENT query when searching YouTube.
+
+3. Do not reuse previous YouTube search results for a new query.
+
+4. If the user's new request is unrelated to previous searches,
+   ignore previous search results.
+
+5. Use get_web_searching for general web searches when the user
+   does not specifically ask for YouTube.
+
+6. If the user asks for homework, coding problems, math problems,
+   or wants to learn a concept, guide them step-by-step instead
+   of immediately giving the full solution.
+
+Be concise unless the user asks for more detail.
+"""
 
 
 Token = os.getenv("Gemini_API_KEY")
@@ -83,6 +108,14 @@ if Token_Weather is None:
 Token_Tavily = os.getenv("tavily_search_api")
 if Token_Tavily is None:
     print("Search API key not found")
+
+Youtube_API = os.getenv("Youtube_search")
+Youtube_API_Service_name = "youtube"
+Youtube_version = "v3"
+youtube_object = build(Youtube_API_Service_name , Youtube_version , developerKey=Youtube_API)
+if Youtube_API is None:
+    print("Youtube Search API KEY IS NOT FOUND")
+
 
 def ask_AI_Tutor(prompt:str) -> str:
     print("Generating response......")
@@ -201,41 +234,31 @@ def get_web_searching(query:str):
         result +=f"{items['content']}\n\n"
     return result
 
-def get_query(query , Conservational_context):
-    WEB_KEYWORDS = [
-    "latest",
-    "today",
-    "current",
-    "news",
-    "recent",
-    "live",
-    "score",
-    "winner",
-    "price",
-    "release",
-    "version",
-    "documentation",
-    "docs",
-    "research",
-    "paper",
-    "api",
-    "sport",
-    "fifa",
-    "game",
-    "GTA"
-    ]
-    if "time" in query.lower():
-        return getDate_time()
-    elif "motivational" in query.lower() or "quotes".lower().strip() in query.lower():
-        return Motivational_quotes()
-    elif "generate password" in query.lower():
-        return generate_password()
-    elif "weather" in query.lower() or "city".lower().strip() in query.lower():
-        return get_weather()
-    elif any(keywords in query.lower() for keywords in WEB_KEYWORDS):
-        return get_web_searching(query)
-    else:
-        return ask_AI_Tutor(Conservational_context)
+def get_youtubesearch(query:str):
+    """
+    Search YouTube for videos based on the user's query.
+
+    Use this function when the user asks for:
+    - YouTube videos
+    - YouTube tutorials
+    - YouTube lectures
+    - YouTube courses
+    - Long-form YouTube courses
+    - Programming tutorials
+    - Machine learning courses
+
+    The query should preserve important requirements such as:
+    topic, course, tutorial, beginner, advanced, long-form,
+    duration, etc.
+    """
+    request = youtube_object.search().list(part = "snippet" , q = query , type = "video" , maxResults = 5)
+    response = request.execute()
+    result = []
+    for items in response['items']:
+        result.append({"Title": items['snippet']['title'], "Video Id":items['id']['videoId'] , "Url": f"https://www.youtube.com/watch?v={items['id']['videoId']}"})
+
+    return result
+
 
 def Generate_ROADMAP(topic):
     return f""""
@@ -294,7 +317,8 @@ TOOLS = [get_certificate ,
         generate_password , 
         get_web_searching , 
         calculator,
-        Motivational_quotes
+        Motivational_quotes,
+        get_youtubesearch
         ]
 def run_agent(history):
 

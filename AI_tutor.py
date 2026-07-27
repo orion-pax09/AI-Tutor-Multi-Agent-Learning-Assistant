@@ -2,6 +2,7 @@ from google import genai
 from dotenv import load_dotenv
 from google.genai import types
 import requests
+import tkinter as tk
 import os
 from googleapiclient.discovery import build
 import time
@@ -65,8 +66,6 @@ class AI_Agent_Roadmap:
         execute = self.executing(plan=plan)
         print(execute)
 
-
-
 system_instruction = """
 You are an expert and patient AI tutor.
 
@@ -74,23 +73,32 @@ Answer the user's CURRENT request.
 
 IMPORTANT TOOL RULES:
 
-1. If the user explicitly asks for YouTube videos, tutorials,
-   lectures, courses, or videos about a topic, use the
-   search_youtube_videos tool.
+1. Always focus on the user's CURRENT message.
 
-2. Always use the user's CURRENT query when searching YouTube.
+2. Do not answer a new question using an old tool result
+   unless the user explicitly refers to the previous result.
 
-3. Do not reuse previous YouTube search results for a new query.
+3. If the user asks about current, live, or up-to-date information
+   that is not available through another specialized tool,
+   use get_web_searching.
 
-4. If the user's new request is unrelated to previous searches,
-   ignore previous search results.
+4. If the user asks for weather, use get_weather.
 
-5. Use get_web_searching for general web searches when the user
-   does not specifically ask for YouTube.
+5. If the user asks for the current date or time,
+   use getDate_time when appropriate.
 
-6. If the user asks for homework, coding problems, math problems,
-   or wants to learn a concept, guide them step-by-step instead
-   of immediately giving the full solution.
+6. If the user explicitly asks for YouTube videos, tutorials,
+   lectures, courses, or videos about a topic,
+   use get_youtubesearch.
+
+7. Always use the user's CURRENT query when searching YouTube.
+
+8. If the user's new request is unrelated to previous searches,
+   do not reuse previous search results.
+
+9. If the user asks for homework, coding problems, math problems,
+   or wants to learn a concept, guide them step-by-step
+   instead of immediately giving the full solution.
 
 Be concise unless the user asks for more detail.
 """
@@ -308,145 +316,126 @@ def get_salary(role:str):
         "role": role,
         "salary": "$80,000 - $150,000 per year"
     }
+
+
 #Register function 
-TOOLS = [get_certificate , 
-        get_skill , 
-        get_salary ,
-        get_weather , 
-        getDate_time , 
-        generate_password , 
-        get_web_searching , 
-        calculator,
-        Motivational_quotes,
-        get_youtubesearch
-        ]
-def run_agent(history):
 
-    while True:
+TOOL = [
+    get_certificate,
+    get_skill,
+    get_salary,
+    get_weather,
+    getDate_time,
+    generate_password,
+    get_web_searching,
+    calculator,
+    Motivational_quotes,
+    get_youtubesearch
+]
+TOOL_MAP = {
+    "get_certificate": get_certificate,
+    "get_skill": get_skill,
+    "get_salary": get_salary,
+    "get_weather": get_weather,
+    "getDate_time": getDate_time,
+    "generate_password": generate_password,
+    "get_web_searching": get_web_searching,
+    "calculator": calculator,
+    "Motivational_quotes": Motivational_quotes,
+    "get_Youtubesearch":get_youtubesearch
 
-        max_retry = 5
-        for attempt in range(max_retry):
-            try:
-                # ---------------------------------
-                # 1. Ask Gemini
-                # ---------------------------------
-                    response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=history,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        tools=TOOLS
-                        )
+}
+
+def Generate_with_retry(history):
+    max_retry = 5
+    for attempt in range(max_retry):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=history,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    tools=TOOL
                     )
-                    break
-            except Exception as e:
-
-                error_message = str(e)
-
-                if "503" in error_message or "UNAVAILABLE" in error_message:
-                    if attempt < max_retry -1:
-                        wait_time = attempt ** attempt
-
-                        print("Gemini is unavailable")
-                        print(f"Retrying in {wait_time}")
-
-                        time.sleep(wait_time)
-                    else:
-                        
-                        return (
-                            "Sorry, Gemini is currently "
-                            "experiencing high demand. "
-                            "Please try again in a moment."
+                )
+            return response
+        except Exception as e:
+            error_message = str(e)
+            if "503" in error_message or "UNAVAILABLE" in error_message:
+                if attempt < max_retry -1:
+                    wait_time = attempt ** attempt
+                    print("Gemini is unavailable")
+                    print(f"Retrying in {wait_time}")
+                    time.sleep(wait_time)
+                else:
+                    return None
+            elif "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
+                if attempt < max_retry-1:
+                    wait_time = 2**attempt
+                    print(
+                        "\nYou have sent too many requests."
                         )
-                elif "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
-                    if attempt < max_retry-1:
-                        wait_time = attempt*(2**attempt)
-                        print(
-                            "\nYou have sent too many requests."
-                        )
-
-                        print(
+                    print(
                             f"Rate limit reached. "
                             f"Retrying in {wait_time} seconds..."
                         )
 
-                        time.sleep(wait_time)
-                    else:
-
-                        return (
-                            "Sorry, you have reached the API "
-                            "rate limit. Please wait a little "
-                            "before trying again."
-                        )
-
-                
+                    time.sleep(wait_time)
                 else:
-                    return f"Gemini API error: {e}"
+                    return None
+            else:
+                print(f"Gemini API error: {e}")
+                return None
 
-                
+    
+def run_agent(history):
 
-        # ---------------------------------
-        # 2. Check if Gemini wants a tool
-        # ---------------------------------
+    MAX_TOOL_ROUNDS = 5
+
+    for round_number in range(MAX_TOOL_ROUNDS):
+
+        print(f"\nAgent round: {round_number+1}")
+
+        response = Generate_with_retry(history)
+
+        if response is None:
+            return None
 
         function_calls = response.function_calls
 
         if not function_calls:
             return response.text
 
-        # ---------------------------------
-        # 3. Save Gemini's response
-        # ---------------------------------
-
         history.append(
             response.candidates[0].content
         )
 
-        # ---------------------------------
-        # 4. Execute function calls
-        # ---------------------------------
-
         function_history = []
 
         for call in function_calls:
+            print(f"Tool selected:{call.name}")
+            print(f"Arguments: {call.args}")
 
-            print(
-                f"Calling function: {call.name}"
-            )
-
-            function = globals().get(
-                call.name
-            )
+            function = TOOL_MAP.get(call.name)
 
             if function is None:
-
-                result = (
-                    f"Function {call.name} "
-                    f"not found"
-                )
+                result = f"Function {call.name} not found."
 
             else:
+                try:
+                    result = function(**call.args)
 
-                result = function(
-                    **call.args
-                )
-
-            # ---------------------------------
-            # 5. Create function response
-            # ---------------------------------
+                except Exception as e:
+                    result = f"Tool execution failed: {e}"
 
             function_history.append(
                 types.Part.from_function_response(
                     name=call.name,
                     response={
-                        "results": result
+                        "result": result
                     }
                 )
             )
-
-        # ---------------------------------
-        # 6. Send function results to Gemini
-        # ---------------------------------
 
         history.append(
             types.Content(
@@ -454,6 +443,8 @@ def run_agent(history):
                 parts=function_history
             )
         )
+
+    return "Maximum tool call limit reached."
         
 def main():
     history = []

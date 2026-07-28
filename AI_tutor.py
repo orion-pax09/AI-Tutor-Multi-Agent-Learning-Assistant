@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 import random
 from tavily import TavilyClient
+
 load_dotenv()
 
 
@@ -263,11 +264,10 @@ def get_youtubesearch(query:str):
     response = request.execute()
     result = []
     for items in response['items']:
-        result.append({"Title": items['snippet']['title'], "Video Id":items['id']['videoId'] , "Url": f"https://www.youtube.com/watch?v={items['id']['videoId']}"})
-
-    return result
-
-
+        result.append({"Title": items['snippet']['title'], "Video Id":items['id']['videoId'] , 
+                       "Url": f"https://www.youtube.com/watch?v={items['id']['videoId']}"})
+        return result
+    
 def Generate_ROADMAP(topic):
     return f""""
     Roadmap for {topic}
@@ -330,7 +330,7 @@ TOOL = [
     get_web_searching,
     calculator,
     Motivational_quotes,
-    get_youtubesearch
+    get_youtubesearch,
 ]
 TOOL_MAP = {
     "get_certificate": get_certificate,
@@ -342,8 +342,7 @@ TOOL_MAP = {
     "get_web_searching": get_web_searching,
     "calculator": calculator,
     "Motivational_quotes": Motivational_quotes,
-    "get_Youtubesearch":get_youtubesearch
-
+    "get_youtubesearch":get_youtubesearch,
 }
 
 def Generate_with_retry(history):
@@ -387,7 +386,20 @@ def Generate_with_retry(history):
                 print(f"Gemini API error: {e}")
                 return None
 
-    
+
+#History management function
+def history_management(history,max_turns =10):
+    turn_start_indices=[]
+    for i in range(len(history)):
+        msg = history[i]
+        role = getattr(msg , "role" , None)
+        if role=="user":
+            turn_start_indices.append(i)
+
+    if len(turn_start_indices)>max_turns:
+        cutoff = turn_start_indices[-max_turns]
+        history[:] = history[cutoff:]
+
 def run_agent(history):
 
     MAX_TOOL_ROUNDS = 5
@@ -455,7 +467,6 @@ def main():
     while True:
         try:
             prompt = input("Ask AI tutor: ")
-            # Roadmap agent 
             if prompt.lower().strip() in ["bye","goodbye","exit","quit","q","stop","end","close","leave","terminate","finish","done",
                           "see you","see ya","farewell","exit()","quit()"]:
                  print("Goodbye")
@@ -476,11 +487,9 @@ def main():
                     print("Final roadmap")
                     print("="*50 , end="")
                     
-                    # after running roadmap agent, skip normal query handling
                     
                     continue
 
-                #Save user Query
             
                 history.append(types.Content(role="user",
                                              parts= [types.Part.from_text(text=prompt)]))

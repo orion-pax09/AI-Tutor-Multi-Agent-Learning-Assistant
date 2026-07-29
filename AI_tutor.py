@@ -26,7 +26,7 @@ class AI_Agent_Roadmap:
         Return only to the skill"""
 
         response = client.models.generate_content(
-            model= "gemini-2.5-flash",
+            model= "gemini-3.6-flash",
             contents=prompt
         )
         return response.text
@@ -51,7 +51,7 @@ class AI_Agent_Roadmap:
         Learning the plan: {plan}
         Create the 90-days roadmap"""
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash-lite",
             contents=prompt
         )
         return response.text
@@ -101,6 +101,17 @@ IMPORTANT TOOL RULES:
    or wants to learn a concept, guide them step-by-step
    instead of immediately giving the full solution.
 
+10.Use previous conversation messages when they are relevant to the user's current request.
+11. Maintain context across follow-up questions.
+12. If the user asks "it", "that", "this", or similar words, use relevant recent conversation context to determine what they refer to.
+13. Do not bring up unrelated topics from previous conversations.
+14. Answer the user's current question directly and stay focused on the current topic.
+15. Do not repeat information from previous conversations unless it is relevant to the current request.
+16. Do NOT include information from previous tool calls (weather data, quotes, search results) 
+    in your response unless the CURRENT message explicitly asks for that same type of information again.
+17. If the user's message is a greeting, farewell, or unrelated statement, respond ONLY to that — 
+    do not append unrelated facts, summaries, or previous results.
+
 Be concise unless the user asks for more detail.
 """
 
@@ -131,7 +142,7 @@ def ask_AI_Tutor(prompt:str) -> str:
     full_stream_response = ""
     try:
         streams = client.models.generate_content_stream(
-            model = "gemini-2.5-flash" ,
+            model = "gemini-3.5-flash-lite" ,
             contents = prompt , 
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -346,11 +357,13 @@ TOOL_MAP = {
 }
 
 def Generate_with_retry(history):
-    max_retry = 5
+
+    max_retry = 3
+
     for attempt in range(max_retry):
         try:
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash-lite",
                 contents=history,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -362,7 +375,7 @@ def Generate_with_retry(history):
             error_message = str(e)
             if "503" in error_message or "UNAVAILABLE" in error_message:
                 if attempt < max_retry -1:
-                    wait_time = attempt ** attempt
+                    wait_time = 15*(attempt+1)
                     print("Gemini is unavailable")
                     print(f"Retrying in {wait_time}")
                     time.sleep(wait_time)
@@ -388,13 +401,17 @@ def Generate_with_retry(history):
 
 
 #History management function
-def history_management(history,max_turns =10):
+def trim_history(history,max_turns =10):
     turn_start_indices=[]
-    for i in range(len(history)):
-        msg = history[i]
+    for i,msg in enumerate(history):
         role = getattr(msg , "role" , None)
-        if role=="user":
+
+        if role == "user":
             turn_start_indices.append(i)
+
+        if len(turn_start_indices) > max_turns:
+            cutoff = turn_start_indices[-max_turns]
+            history[:] = history[cutoff:]
 
     if len(turn_start_indices)>max_turns:
         cutoff = turn_start_indices[-max_turns]
@@ -411,9 +428,12 @@ def run_agent(history):
         response = Generate_with_retry(history)
 
         if response is None:
-            return None
+            return "I'm temporarily unable to process your request because the API rate limit was reached. Please try again in a little while"
 
         function_calls = response.function_calls
+
+        if not response.candidates:
+            return "Gemini returned an empty response."
 
         if not function_calls:
             return response.text
@@ -456,17 +476,21 @@ def run_agent(history):
             )
         )
 
-    return "Maximum tool call limit reached."
+    return "I reached the maximum number of tool calls for this request. Please try asking again."
         
 def main():
     history = []
-    Max_history =20
     print("="*50)
     print("AI tutor")
     print("="*50)
     while True:
         try:
             prompt = input("Ask AI tutor: ")
+
+            if not prompt.strip():
+                print("Please ask a question")
+                continue
+
             if prompt.lower().strip() in ["bye","goodbye","exit","quit","q","stop","end","close","leave","terminate","finish","done",
                           "see you","see ya","farewell","exit()","quit()"]:
                  print("Goodbye")
@@ -486,32 +510,31 @@ def main():
                     print("\n" + "="*50)
                     print("Final roadmap")
                     print("="*50 , end="")
-                    
-                    
+                                        
                     continue
 
-            
                 history.append(types.Content(role="user",
                                              parts= [types.Part.from_text(text=prompt)]))
-                if len(history) > Max_history:
-                    history = history[-Max_history:]
-
                 start_time = time.time()
 
                 AI_response = run_agent(history=history)
+                
+                if AI_response is None:
+                    print("\nAI tutor: Sorry, I couldn't process your request right now.")
+                    continue
+
                 print(f"\nAI tutor: ")
                 print(AI_response)
-            
+
                 end_time = time.time() 
                 total_time=round(end_time - start_time, 2)
                 print(f"\nResponse time taken: {total_time} seconds")
+
+                trim_history(history=history , max_turns=10)
             
         except Exception as e:
             print("AI tutor is unavailable temporary")
             print(e)
-
-
-
 
 if __name__ == "__main__":
     main()

@@ -170,60 +170,6 @@ def calculator(expression:str):
         return eval(expression)
     except Exception as e:
         return "Invalid expression"
-    
-
-def Motivational_quotes():
-    quotes = [
-    "Discipline beats motivation.",
-    "No pain, no gain.",
-    "Success is earned, not given.",
-    "Pain is temporary. Quitting lasts forever.",
-    "Every expert was once a beginner.",
-    "Talk is cheap. Show me the code.",
-    "First, solve the problem. Then, write the code.",
-    "Comfort is the enemy of progress.",
-    "Consistency beats intensity.",
-    "One bug at a time.",
-    "Pressure creates diamonds.",
-    "Stay hungry. Stay foolish.",
-    "Dream big. Start small. Act now.",
-    "Small improvements every day lead to big results.",
-    "You become what you repeatedly do.",
-    "The grind never lies.",
-    "Build. Break. Learn. Repeat.",
-    "Your only competition is who you were yesterday.",
-    "Hard times create strong people.",
-    "The best developers were once confused beginners.",
-    "Your GitHub tells the story your résumé can't",
-    "Discipline gets you to the gym. Consistency builds your body. Persistence writes the code. Time rewards them all",
-    "Pain is temporary. Quitting lasts forever.",
-    "Don't wish for it. Work for it.",
-    "Train like a beast.",
-    "Every workout counts.",
-    "One more rep.",
-    "One more problem.",
-    "Success is earned, not given.",
-    "One more day.",
-    "Win the day.",
-    "Stay disciplined.",
-    "Trust the process.",
-    "Never stop learning."
-]
-    return random.choice(quotes)
-
-def generate_password(length : int):
-    symbol = "AB`CD~EFGHI!JK@LM#NO$PQ%RS^TU&VW*XY(Za)bc+d9-e8=f7g6h5i4j321klmnopqrstuvwxyz"
-    try:
-        if length <=0:
-            return "❌ length should not be less than or equal to zero"
-        if length >=len(symbol):
-            return f"❌ length shouldn't exceed the {len(symbol)}"
-        password = "".join(random.sample(symbol,length))
-        return password
-    
-    except Exception as e:
-        return "Invalid. Enter the length in digit"
-            
 
 def get_weather(city:str):
     weather_data = requests.get(f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&APPID={Token_Weather}")
@@ -337,10 +283,8 @@ TOOL = [
     get_salary,
     get_weather,
     getDate_time,
-    generate_password,
     get_web_searching,
     calculator,
-    Motivational_quotes,
     get_youtubesearch,
 ]
 TOOL_MAP = {
@@ -349,10 +293,8 @@ TOOL_MAP = {
     "get_salary": get_salary,
     "get_weather": get_weather,
     "getDate_time": getDate_time,
-    "generate_password": generate_password,
     "get_web_searching": get_web_searching,
     "calculator": calculator,
-    "Motivational_quotes": Motivational_quotes,
     "get_youtubesearch":get_youtubesearch,
 }
 
@@ -491,9 +433,9 @@ def main():
                 print("Please ask a question")
                 continue
 
-            if prompt.lower().strip() in ["bye","goodbye","exit","quit","q","stop","end","close","leave","terminate","finish","done",
+            if prompt.lower().strip() in ["ok bye","bye","goodbye","exit","quit","q","stop","end","close","leave","terminate","finish","done",
                           "see you","see ya","farewell","exit()","quit()"]:
-                 print("Goodbye")
+                 print("AI tutor: Goodbye")
                  break
             
             else:

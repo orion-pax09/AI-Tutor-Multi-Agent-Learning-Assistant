@@ -12,7 +12,6 @@ from tavily import TavilyClient
 
 load_dotenv()
 
-
 class AI_Agent_Roadmap:
     def __init__(self , goal):
         self.goal = goal
@@ -192,8 +191,14 @@ def get_weather(city:str):
         return "❌ Unable to connect to the weather service. Please try again later."
 
 def get_web_searching(query:str):
+    search_query = f"""
+    Search the web for the following query:
+    {query}
+    Find the most relevant and up-to-date information.
+    Prioritize reliable and authoritative sources.
+    Focus only on information directly related to the query."""
     client = TavilyClient(Token_Tavily)
-    response = client.search(query)
+    response = client.search(search_query)
     result = ""
     for items in response['results']:
         result +=f"{items['title']}\n"
@@ -241,7 +246,7 @@ def get_skill(role:str):
     
     """
     return {
-        "Role" : role,
+        "role" : role,
         "skills": [
             "python" , "Machine learning" , "Data science" , "Deep learning" , "LLMS"
         ]
@@ -419,7 +424,168 @@ def run_agent(history):
         )
 
     return "I reached the maximum number of tool calls for this request. Please try asking again."
-        
+
+class ReAct_agent:
+    def __init__(self, goal):
+        self.goal = goal
+        self.observation = []
+        #think
+    def think(self):
+               prompt = f"""
+                    You are a ReAct AI agent.
+                    Your goal:
+                    {self.goal}
+                    Available tools:
+
+                    1. get_certificate
+                    - Use this to find information about certificates and certifications.
+                    2. get_skill
+                    - Use this to find skills required for a career, job, or field.
+                    3. get_salary
+                    - Use this to find salary-related information.
+                    4. get_weather
+                    - Use this to get current or forecast weather information.
+                    5. getDate_time
+                    - Use this to get the current date or time.
+                    6. get_web_searching
+                    - Use this when you need current, up-to-date, or general information
+                    from the internet.
+                    - Use this when the user asks you to research a topic.
+                    - Use this when the answer cannot be reliably determined from your
+                    existing knowledge.
+                    - The Action Input must be a clear and specific search query.
+                    7. calculator
+                    - Use this for mathematical calculations.
+                    8. get_youtubesearch
+                    - Use this to find relevant YouTube videos.
+                    Previous observations:
+                    {self.observation}
+                    Follow the ReAct process:
+                    1. Understand the user's goal.
+                    2. Review previous observations.
+                    3. Determine what information is still missing.
+                    4. Decide whether a tool is required.
+                    5. Select the most appropriate tool.
+                    6. Provide a clear Action Input.
+                    7. After the tool executes, use its result as a new Observation.
+                    8. Continue reasoning until the goal is completely achieved.
+                    9. Provide the Final Answer.Important rules:
+                    - Action must be exactly one of the available tool names.
+                    - Never invent a tool.
+                    - Do not make up tool results.
+                    - Do not repeat a tool call if the required information is already
+                    available in the observations.
+                    - You may call multiple tools if the goal requires multiple pieces
+                    of information.
+                    - For web searches, create a specific search query that directly
+                    targets the missing information.
+                    - Do not use web search when another specialized tool is more appropriate.
+                    -Only provide a Final Answer when the user's goal has been completed.
+                    Return exactly one of the following formats.
+                    If a tool is required:
+                    Thought: <brief reasoning about what information is needed>
+                    Action: <exact tool name>
+                    Action Input: <input for the tool>
+                    If the goal is complete:
+                    Thought: <brief explanation of why the goal is complete>
+                    Final Answer: <clear answer to the user's goal>   
+                    Finish                 
+                    """
+               response = client.models.generate_content(model="gemini-3.5-flash-lite" , contents=prompt)
+               return response.text.strip()
+    #action
+    def execute(self , action,action_input):
+        tool = TOOL_MAP.get(action)
+        if tool is None:
+            return f"Tool '{action}' not found"
+        try:
+            return tool(action_input)
+        except Exception as e:
+            return f"Tool execution failed {e}"
+
+    #Final response
+    def generate_final_response(self):
+        prompt = f"""
+        You are the final response generator for a ReAct AI agent.
+        The user's original goal was:
+        {self.goal}
+        The agent performed several actions and collected the following observations:
+        {self.observation}
+        Your task is to provide the best possible final answer to the user's goal.
+        Instructions:
+        - Use the observations as the primary source of information.
+        - Combine information from multiple observations when necessary.
+        - Answer the user's original goal completely.
+        - Do not mention the internal ReAct process.
+        - Do not mention Thought, Action, Action Input, or Observation.
+        - Do not say that you are an AI agent.
+        - Do not make up information that is not supported by the observations.
+        - If the observations contain conflicting information, clearly mention the conflict.
+        - If the available information is insufficient to fully answer the goal, honestly explain what is missing.
+        - Be clear, concise, and helpful.
+        - Structure the answer using bullet points or headings when appropriate.
+        Return only the final answer that should be shown to the user.
+        """
+        response = client.models.generate_content(model="gemini-3.5-flash-lite",contents=prompt)
+        print("="*60)
+        print(" "*30,{response.text})
+        print(r"="*60)
+
+    #ReAct loop
+    def observe(self,result):
+        self.observation.append(result)
+    def ReAct_loop(self):
+        Max_steps = 5
+        for step in range(Max_steps):
+            print("Step: ",step)
+            print(f"{'='*60}")
+            print("Steps: ",step)
+            print(f"{'='*60}")
+
+            #think
+            responses = self.think()
+            print("\nThink: ")
+            print(responses)
+
+            if "Finish" in responses:
+                print("Goal completed")
+                Final_Answer = self.generate_final_response()
+                print(Final_Answer)
+                return Final_Answer
+
+            action=None
+            action_input = None
+            for line in responses.splitlines():
+                if line.startswith("Action:").split():
+                    action = line.replace("Action:","").split()
+                elif line.startswith("Action Input:","").split():
+                    action_input=line.replace("Action Input:","").split()
+
+                if not action or action_input:
+                    print("Could not parse action")
+                    break
+
+                #Act
+
+                print("\nAction: ")
+                print(action)
+
+                print("\n Action input: ")
+                print(action_input)
+
+                result=self.execute(action=action,action_input=action_input)
+
+                #observe
+
+                print("\nObservation: ")
+                Observe = self.generate_final_response()
+                print(Observe)
+
+                self.observe(result)
+                
+
+            print("The agent reached the maximum steps")
+
 def main():
     history = []
     print("="*50)
@@ -427,53 +593,79 @@ def main():
     print("="*50)
     while True:
         try:
-            prompt = input("Ask AI tutor: ")
-
-            if not prompt.strip():
-                print("Please ask a question")
+            print("Please choose your mood")
+            print("1. Simple and guiding information")
+            print("2. Detailed and clear information")
+            print("3. Normal AI Tutor")
+            print("Type 'exit' to quit")
+            choice=input("Enter the mode of your choices: ").strip()
+            if not choice.strip():
+                print("Please enter the AI mode")
                 continue
 
-            if prompt.lower().strip() in ["ok bye","bye","goodbye","exit","quit","q","stop","end","close","leave","terminate","finish","done",
+            if choice.lower().strip() in ["ok bye","bye","goodbye","exit","quit","q","stop","end","close","leave","terminate","finish","done",
                           "see you","see ya","farewell","exit()","quit()"]:
                  print("AI tutor: Goodbye")
                  break
-            
-            else:
-                if prompt.lower().startswith("roadmap"):
-                    goal = prompt[7:].strip()
-
-                    if not goal:
-                        print("Please provide goal")
-                        continue
-
-                    agent = AI_Agent_Roadmap(goal=goal)
-                    agent.run()
-
-                    print("\n" + "="*50)
-                    print("Final roadmap")
-                    print("="*50 , end="")
-                                        
+            if choice=="1":
+                prompt = input("Ask AI tutor: ")
+                goal = prompt[7:].strip()
+                if not goal:
+                    print("Please provide goal")
                     continue
+                print("\n"+"="*30)
+                print("AI agent mode")
+                print("="*30)
+                agent = AI_Agent_Roadmap(goal=goal)
+                agent.run()
 
-                history.append(types.Content(role="user",
+                print("\n" + "="*30)
+                print("Final roadmap")
+                print("="*30)
+                continue
+
+            elif choice==2:
+                prompt = input("Ask AI tutor: ")
+                print("\n"+"="*30)
+                print("ReAct agent mode")
+                print("="*30)
+                goal = prompt[7:].strip()
+                if not goal:
+                    print("Please provide goal")
+                    continue
+                print("\n" + "="*30)
+                print("Final roadmap")
+                print("="*30)
+                React_agent=ReAct_agent(goal=goal)
+                final_answer=React_agent.generate_final_response()
+                print("\n" + "="*50)
+                print("Final answer")
+                print("="*50 , end="")
+                print(final_answer)
+                continue
+            elif choice==3:
+                prompt = input("\nAsk AI tutor: ")
+                if not prompt:
+                    print("Please ask question")
+
+            history.append(types.Content(role="user",
                                              parts= [types.Part.from_text(text=prompt)]))
-                start_time = time.time()
+            start_time = time.time()
 
-                AI_response = run_agent(history=history)
+            AI_response = run_agent(history=history)
                 
-                if AI_response is None:
-                    print("\nAI tutor: Sorry, I couldn't process your request right now.")
-                    continue
+            if AI_response is None:
+                print("\nAI tutor: Sorry, I couldn't process your request right now.")
+                continue
+            print(f"\nAI tutor: ")
+            print(AI_response)
 
-                print(f"\nAI tutor: ")
-                print(AI_response)
+            end_time = time.time() 
+            total_time=round(end_time - start_time, 2)
+            print(f"\nResponse time taken: {total_time} seconds")
 
-                end_time = time.time() 
-                total_time=round(end_time - start_time, 2)
-                print(f"\nResponse time taken: {total_time} seconds")
-
-                trim_history(history=history , max_turns=10)
-            
+            trim_history(history=history , max_turns=10)
+            continue
         except Exception as e:
             print("AI tutor is unavailable temporary")
             print(e)

@@ -1,4 +1,4 @@
-# Python AI Learning Assistant
+# Python AI Tutor
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)
 ![Gemini API](https://img.shields.io/badge/Gemini-API-orange?logo=google&logoColor=white)
@@ -6,137 +6,108 @@
 ![OpenWeather](https://img.shields.io/badge/OpenWeather-API-yellow)
 ![Status](https://img.shields.io/badge/Status-In%20Development-brightgreen)
 
-A command-line AI tutor built with Google's Gemini API. It started out as a simple chatbot that answers questions, but it's slowly turning into something smarter — an assistant that can pick the right tool for the job, not just chat.
+A command-line AI tutor built with Google's Gemini API. It's not just a chatbot — it can actually pick tools and use them, reason through multi-step problems, and build you a full learning roadmap for any goal you throw at it.
 
-## What this project actually does
+What this project actually does
 
-At its core, you type a question or request into the terminal, and one of two things happens:
+You type something into the terminal, and depending on what you ask, one of three things happens:
 
-- If it's a normal question (like "explain recursion"), Gemini just answers it directly, like a tutor would.
-- If it sounds like something that needs a tool (like "what's the weather in Tokyo"), Gemini figures out *which* tool fits best, and then Python actually runs that tool and gives you the result.
+Just chatting? Gemini answers you directly, like a tutor would.
+Need something real-world? (weather, a search, a YouTube tutorial, a calculation) Gemini figures out which tool fits, Python runs it, and you get the actual result — not a guess.
+Want a full plan? Type roadmap <your goal> and it builds you a 90-day learning roadmap from scratch.
 
-So Gemini isn't running the tools itself — it's more like the decision-maker. It looks at your message and says "this needs the weather tool" or "this needs the calculator." Then plain Python code takes over and does the actual work. If Gemini decides no tool is needed, it just answers you directly as a tutor.
+There's also a ReAct-style agent in the code (think → act → observe → repeat until it has enough info to answer you) — it's built and working as its own piece, but it's not hooked up to the main chat yet. More on that below.
 
-There's also a separate part of the project — the **roadmap agent** — that builds you a 90-day learning plan for any topic. You trigger it by typing `roadmap` followed by your goal (e.g. `roadmap learn web development`), and it runs through three steps: it figures out the skills you need (reasoning), puts them in the right learning order (planning), and then writes out the full 90-day roadmap (execution).
+The three modes
 
-## How a request flows through the app
+1. Normal tutor mode This is the default. You ask, Gemini either answers directly or calls a tool (weather, search, calculator, YouTube, etc.), and it remembers what you talked about earlier in the conversation so follow-up questions actually make sense.
 
-**Normal question:**
-```
-You ask something → Gemini answers directly → You get a response
-```
+2. Roadmap mode Type roadmap learn web development and it runs through three steps behind the scenes:
 
-**Something that needs a tool:**
-```
-You ask something → Gemini decides which tool fits → Python runs that tool → You get the result
-```
+figures out what skills you actually need
+puts them in the right order to learn them
+writes out a full 90-day plan based on that order
 
-**Roadmap request:**
-```
-You type "roadmap <your goal>" → Reasoning → Planning → Execution → Full 90-day roadmap
-```
+3. ReAct agent This one's the "smart researcher" — it thinks about what it needs, picks a tool, looks at the result, and keeps going until it's confident it can give you a complete answer. Right now it works as its own class in the code, but you'd need to call it directly (it's not wired into the terminal chat yet).
 
-## What it can do right now
+Tools it can actually use
+Tool	What it does
+Weather	Current weather for any city (OpenWeatherMap)
+Web search	Looks stuff up online for you (Tavily)
+YouTube search	Finds relevant tutorial videos
+Date/time	Tells you the current time
+Calculator	Does math on the fly
+Skills lookup	Suggests skills for a career goal
+Certifications	Suggests relevant certifications
+Salary info	Gives you a rough salary range
 
-- Chat with you like a tutor, and remember what you talked about earlier in the conversation
-- Tell you the current time
-- Do calculations
-- Check the weather for a city
-- Search the web (using Tavily)
-- Give you a motivational quote when you need one
-- Generate a secure random password
-- Build you a 90-day learning roadmap for any goal
+Quick note: the skills/certifications/salary tools currently return the same fixed info no matter what goal you give them — they're placeholders for now, not pulling live data yet.
 
-## The roadmap agent, a bit more detail
+Getting it running
+bash
+# clone it
+git clone https://github.com/your-username/ai-tutor.git
+cd ai-tutor
 
-Typing `roadmap <goal>` skips the normal tool-selection step and goes straight into its own three-step process:
-
-1. **Reasoning** – Gemini looks at your goal and figures out what skills are actually needed
-2. **Planning** – it arranges those skills into the best order to learn them
-3. **Execution** – it writes out the full 90-day roadmap based on that plan
-
-## A couple of quick examples
-
-**Asking about the weather:**
-```
-You: What's the weather in Tokyo?
-Gemini decides: Weather_Tools
-Python runs: get_weather()
-You get: current weather for Tokyo
-```
-
-**Asking for motivation:**
-```
-You: Give me motivation.
-Gemini decides: Motivational tools
-Python runs: Motivational_quotes()
-You get: a random motivational quote
-```
-
-**Just asking a normal question:**
-```
-You: What is a binary search tree?
-Gemini decides: no_tool
-Gemini answers directly, step by step
-```
-
-## Setting it up
-
-1. Clone the repo:
-```bash
-git clone https://github.com/your-username/Python_AI_learning_Assistant.git
-cd Python_AI_learning_Assistant
-```
-
-2. (Optional but recommended) make a virtual environment:
-```bash
+# set up a virtual environment
 python -m venv venv
 source venv/bin/activate      # Windows: venv\Scripts\activate
-```
 
-3. Install what it needs:
-```bash
+# install what it needs
 pip install -r requirements.txt
-```
 
-4. Create a `.env` file in the project folder and add your API keys:
-```env
+Then create a .env file in the project folder with your API keys:
+
+env
 Gemini_API_KEY=your_gemini_api_key
 Weather_API_key=your_weather_api_key
 tavily_search_api=your_tavily_api_key
-```
+Youtube_search=your_youtube_api_key
 
-**Important:** don't ever commit your `.env` file to GitHub. Keep your keys private — make sure `.env` is in your `.gitignore`.
+Don't commit that .env file — add it to .gitignore and keep your keys to yourself.
 
-## Running it
-
-```bash
+Running it
+bash
 python AI_tutor.py
-```
 
-Then just type whatever you want:
-- Ask a question and get tutored
-- Ask for the weather, a calculation, a password, or a motivational quote
-- Type `roadmap <your goal>` to get a full 90-day learning plan
+Then just talk to it:
 
-Type `exit`, `quit`, `bye`, or similar to end the session.
+text
+Ask AI tutor: What's the weather in Karachi?
+Ask AI tutor: roadmap learn machine learning
+Ask AI tutor: What is a binary search tree?
+Ask AI tutor: exit
 
-## Where this is headed
+Type exit, quit, bye, or a handful of other variants to end the session.
 
-This is still very much a work in progress. Things I'm planning to add or improve:
+How reliable is it?
 
-- Using Gemini's actual function-calling feature instead of just asking it to name a tool in plain text
-- Having the AI pull out the details it needs for a tool automatically (like the city name for weather), instead of asking for input separately
-- Letting it chain multiple steps together instead of just picking one tool at a time
-- Saving conversations and roadmaps somewhere permanent (a database) instead of losing them when the app closes
-- A proper web interface, so it's not just a terminal app
-- A FastAPI backend so other apps could talk to it too
-- Actually deploying it somewhere so other people could use it
+It retries automatically if Gemini is overloaded or you hit a rate limit, and it won't crash the whole app if something goes wrong mid-conversation — you'll just get an error message and can try again. That said, this is a personal project built to learn, not something battle-tested for production use.
 
-## A note on how the "tool selection" works
+Stuff that's still rough around the edges
 
-Right now, when I say Gemini "picks a tool," I mean I'm prompting it with the user's message and a list of tool names, and it just replies with the name of the one it thinks fits (or `no_tool` if none apply). Python then matches that name to a function and runs it. It's not using Gemini's official built-in function-calling system yet — that's one of the upgrades I want to make later.
+Being upfront about this instead of pretending it's all polished:
 
-## About me
+The ReAct agent isn't connected to the main chat loop yet — it works, but you have to call it directly in code
+A couple of internal bugs in the ReAct loop still need fixing (how it decides it's "done," and how it passes info to tools)
+The calculator uses Python's eval(), which works fine for personal use but isn't something you'd want exposed publicly
+YouTube search currently only returns one video instead of several, due to a small loop bug
+Model names used across the different agents aren't consistent — a cleanup pass is needed there
+What's next
+Hook the ReAct agent into the main chat
+Fix the known bugs above
+Make the skills/certs/salary tools pull real data instead of fixed answers
+Split the code into separate files instead of one big script
+Save conversations and roadmaps somewhere permanent
+Maybe a simple web UI down the line
+Why I built this
 
-Built by Muhammad Hamza Khan, as a way to learn how to actually build with LLMs instead of just using them.
+Mostly to actually learn how LLM agents work under the hood — real tool calling, a reasoning loop, and multi-step workflows — instead of just calling a chat API and calling it a day.
+
+A couple of honest notes
+
+You'll need your own API keys for Gemini, Tavily, OpenWeather, and YouTube for this to work. Since it leans on third-party services, results (especially search and weather) can vary or occasionally be slow/unavailable — that's on them, not the code.
+
+License
+
+No license file yet — add one (MIT works fine) if you want to open this up publicly.

@@ -230,62 +230,9 @@ def get_youtubesearch(query:str):
                        "Url": f"https://www.youtube.com/watch?v={items['id']['videoId']}"})
         return result
     
-def Generate_ROADMAP(topic):
-    return f""""
-    Roadmap for {topic}
-    1. Learn Fundamental
-    2. Practice Projects
-    3. Build portfolio
-    4. Apply for jobs
-    """""
-def get_skill(role:str):
-    """""
-    return the skills only required for role 
-    Parameter: role(str) - career role selected by user
-    Return: dict : Required skills 
-    
-    """
-    return {
-        "role" : role,
-        "skills": [
-            "python" , "Machine learning" , "Data science" , "Deep learning" , "LLMS"
-        ]
-    }
-
-def get_certificate(role:str):
-    """""
-    Returns certification info 
-    Parameters: role(str): Career role 
-    Returns:Dict
-    """
-
-    return {
-            "role": role ,
-            "certificates": [
-                "Google Professional Machine Learning Engineer",
-                "AWS Machine Learning Specialty"
-                ]
-            }
-
-def get_salary(role:str):
-    """""
-    Returns expected salary range
-    Parameters: role(str)
-    Returns:Dict
-    """
-
-    return {
-        "role": role,
-        "salary": "$80,000 - $150,000 per year"
-    }
-
-
 #Register function 
 
 TOOL = [
-    get_certificate,
-    get_skill,
-    get_salary,
     get_weather,
     getDate_time,
     get_web_searching,
@@ -293,9 +240,6 @@ TOOL = [
     get_youtubesearch,
 ]
 TOOL_MAP = {
-    "get_certificate": get_certificate,
-    "get_skill": get_skill,
-    "get_salary": get_salary,
     "get_weather": get_weather,
     "getDate_time": getDate_time,
     "get_web_searching": get_web_searching,
@@ -566,7 +510,6 @@ class ReAct_agent:
                     break
 
                 #Act
-
                 print("\nAction: ")
                 print(action)
 
@@ -594,9 +537,8 @@ def main():
     while True:
         try:
             print("Please choose your mood")
-            print("1. Simple and guiding information")
-            print("2. Detailed and clear information")
-            print("3. Normal AI Tutor")
+            print("1. Normal AI tutor")
+            print("2. Advanced AI tutor")
             print("Type 'exit' to quit")
             choice=input("Enter the mode of your choices: ").strip()
             if not choice.strip():
@@ -609,7 +551,7 @@ def main():
                  break
             if choice=="1":
                 prompt = input("Ask AI tutor: ")
-                goal = prompt[7:].strip()
+                goal = prompt.strip()
                 if not goal:
                     print("Please provide goal")
                     continue
@@ -624,12 +566,12 @@ def main():
                 print("="*30)
                 continue
 
-            elif choice==2:
+            elif choice=="2":
                 prompt = input("Ask AI tutor: ")
                 print("\n"+"="*30)
                 print("ReAct agent mode")
                 print("="*30)
-                goal = prompt[7:].strip()
+                goal = prompt.strip()
                 if not goal:
                     print("Please provide goal")
                     continue
@@ -637,16 +579,15 @@ def main():
                 print("Final roadmap")
                 print("="*30)
                 React_agent=ReAct_agent(goal=goal)
-                final_answer=React_agent.generate_final_response()
+                final_answer=React_agent.ReAct_loop()
                 print("\n" + "="*50)
                 print("Final answer")
                 print("="*50 , end="")
                 print(final_answer)
                 continue
-            elif choice==3:
-                prompt = input("\nAsk AI tutor: ")
-                if not prompt:
-                    print("Please ask question")
+            else:
+                print("Enter 1 to enter norma AI tutor")
+                print("Enter 2 to enter advanced AI tutor")
 
             history.append(types.Content(role="user",
                                              parts= [types.Part.from_text(text=prompt)]))
@@ -667,8 +608,7 @@ def main():
             trim_history(history=history , max_turns=10)
             continue
         except Exception as e:
-            print("AI tutor is unavailable temporary")
-            print(e)
+            print(f"Error{e}")
 
 if __name__ == "__main__":
     main()

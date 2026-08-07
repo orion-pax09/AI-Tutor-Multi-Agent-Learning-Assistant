@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from google.genai import types
 import requests
 import tkinter as tk
+import json
 import os
 from googleapiclient.discovery import build
 import time
@@ -161,10 +162,16 @@ def ask_AI_Tutor(prompt:str) -> str:
 
 def getDate_time():
     now = datetime.now()
-    return now.strftime("%I:%M:%S %P")
+    return now.strftime("%I:%M:%S %p")
 
 
 def calculator(expression:str):
+    """
+    Evaluate a pure Python arithmetic expression.
+    The input must be a valid Python expression using numbers and
+    operators only (+, -, *, /, **, %, parentheses) — 
+    e.g. "2400 * 0.15", not "15% of 2400".
+    """
     try:
         return eval(expression)
     except Exception as e:
@@ -228,7 +235,7 @@ def get_youtubesearch(query:str):
     for items in response['items']:
         result.append({"Title": items['snippet']['title'], "Video Id":items['id']['videoId'] , 
                        "Url": f"https://www.youtube.com/watch?v={items['id']['videoId']}"})
-        return result
+    return result
     
 #Register function 
 
@@ -369,85 +376,95 @@ def run_agent(history):
 
     return "I reached the maximum number of tool calls for this request. Please try asking again."
 
+
 class ReAct_agent:
     def __init__(self, goal):
         self.goal = goal
         self.observation = []
-        #think
-    def think(self):
-               prompt = f"""
-                    You are a ReAct AI agent.
-                    Your goal:
-                    {self.goal}
-                    Available tools:
 
-                    1. get_certificate
-                    - Use this to find information about certificates and certifications.
-                    2. get_skill
-                    - Use this to find skills required for a career, job, or field.
-                    3. get_salary
-                    - Use this to find salary-related information.
-                    4. get_weather
-                    - Use this to get current or forecast weather information.
-                    5. getDate_time
-                    - Use this to get the current date or time.
-                    6. get_web_searching
-                    - Use this when you need current, up-to-date, or general information
-                    from the internet.
-                    - Use this when the user asks you to research a topic.
-                    - Use this when the answer cannot be reliably determined from your
-                    existing knowledge.
-                    - The Action Input must be a clear and specific search query.
-                    7. calculator
-                    - Use this for mathematical calculations.
-                    8. get_youtubesearch
-                    - Use this to find relevant YouTube videos.
-                    Previous observations:
-                    {self.observation}
-                    Follow the ReAct process:
-                    1. Understand the user's goal.
-                    2. Review previous observations.
-                    3. Determine what information is still missing.
-                    4. Decide whether a tool is required.
-                    5. Select the most appropriate tool.
-                    6. Provide a clear Action Input.
-                    7. After the tool executes, use its result as a new Observation.
-                    8. Continue reasoning until the goal is completely achieved.
-                    9. Provide the Final Answer.Important rules:
-                    - Action must be exactly one of the available tool names.
-                    - Never invent a tool.
-                    - Do not make up tool results.
-                    - Do not repeat a tool call if the required information is already
-                    available in the observations.
-                    - You may call multiple tools if the goal requires multiple pieces
-                    of information.
-                    - For web searches, create a specific search query that directly
-                    targets the missing information.
-                    - Do not use web search when another specialized tool is more appropriate.
-                    -Only provide a Final Answer when the user's goal has been completed.
-                    Return exactly one of the following formats.
-                    If a tool is required:
-                    Thought: <brief reasoning about what information is needed>
-                    Action: <exact tool name>
-                    Action Input: <input for the tool>
-                    If the goal is complete:
-                    Thought: <brief explanation of why the goal is complete>
-                    Final Answer: <clear answer to the user's goal>   
-                    Finish                 
-                    """
-               response = client.models.generate_content(model="gemini-3.5-flash-lite" , contents=prompt)
-               return response.text.strip()
-    #action
-    def execute(self , action,action_input):
+    # think
+    def think(self):
+        prompt = f"""
+        You are a ReAct AI agent.
+        Your goal:
+        {self.goal}
+
+        Available tools:
+        1. get_weather
+           - Use this to get current or forecast weather information.
+        2. getDate_time
+           - Use this to get the current date or time.
+        3. get_web_searching
+           - Use this when you need current, up-to-date, or general information from the internet.
+           - Do NOT use this for video, tutorial, or course requests — use get_youtubesearch instead.
+        4. calculator
+           - Use this for mathematical calculations. Input must be a valid Python expression
+             (e.g. "2400 * 0.15", not "15% of 2400").
+        5. get_youtubesearch
+           - Use this whenever the user asks for videos, tutorials, lectures, or courses on a topic.
+           - Always prefer this over get_web_searching for video/course-related requests.
+
+        Previous observations:
+        {self.observation}
+
+        Follow the ReAct process:
+        1. Understand the user's goal.
+        2. Review previous observations.
+        3. Determine what information is still missing.
+        4. Decide whether a tool is required.
+        5. If a tool is required, select exactly one of the tool names above and give a clear input for it.
+        6. Only mark the goal as complete when it has actually been achieved using the observations.
+
+        Important rules:
+        - "action" must be exactly one of the tool names above, or null if no tool is needed.
+        - Never invent a tool name.
+        - Do not make up tool results.
+        - Do not repeat a tool call if the required information is already available in the observations.
+
+        Respond with ONLY a valid JSON object, no markdown formatting, no extra text, in exactly this shape:
+        {{
+          "thought": "brief reasoning about what is needed next",
+          "action": "<exact tool name, or null if none needed>",
+          "action_input": "<input string for the tool, or null if none needed>",
+          "is_final": true or false,
+          "final_answer": "<the final answer if is_final is true, otherwise null>"
+        }}
+        """
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
+        )
+        text = response.text.strip()
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # fallback: strip accidental markdown fences if the model adds them anyway
+            cleaned = text.replace("```json", "").replace("```", "").strip()
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError:
+                return {
+                    "thought": "Failed to parse model output.",
+                    "action": None,
+                    "action_input": None,
+                    "is_final": False,
+                    "final_answer": None,
+                }
+
+    # action
+    def execute(self, action, action_input):
         tool = TOOL_MAP.get(action)
         if tool is None:
             return f"Tool '{action}' not found"
         try:
             return tool(action_input)
         except Exception as e:
-            return f"Tool execution failed {e}"
+            return f"Tool execution failed: {e}"
 
-    #Final response
+    # Final response
     def generate_final_response(self):
         prompt = f"""
         You are the final response generator for a ReAct AI agent.
@@ -470,65 +487,44 @@ class ReAct_agent:
         - Structure the answer using bullet points or headings when appropriate.
         Return only the final answer that should be shown to the user.
         """
-        response = client.models.generate_content(model="gemini-3.5-flash-lite",contents=prompt)
-        print("="*60)
-        print(" "*30,{response.text})
-        print(r"="*60)
+        response = client.models.generate_content(model="gemini-3.5-flash-lite", contents=prompt)
+        return response.text
 
-    #ReAct loop
-    def observe(self,result):
+    def observe(self, result):
         self.observation.append(result)
+
+    # ReAct loop
     def ReAct_loop(self):
         Max_steps = 5
         for step in range(Max_steps):
-            print("Step: ",step)
-            print(f"{'='*60}")
-            print("Steps: ",step)
+            print("Step: ", step)
             print(f"{'='*60}")
 
-            #think
-            responses = self.think()
-            print("\nThink: ")
-            print(responses)
+            parsed = self.think()
+            print("\nThought: ", parsed.get("thought"))
 
-            if "Finish" in responses:
+            if parsed.get("is_final"):
                 print("Goal completed")
-                Final_Answer = self.generate_final_response()
-                print(Final_Answer)
-                return Final_Answer
+                final = parsed.get("final_answer")
+                return final if final else self.generate_final_response()
 
-            action=None
-            action_input = None
-            for line in responses.splitlines():
-                if line.startswith("Action:").split():
-                    action = line.replace("Action:","").split()
-                elif line.startswith("Action Input:","").split():
-                    action_input=line.replace("Action Input:","").split()
+            action = parsed.get("action")
+            action_input = parsed.get("action_input")
 
-                if not action or action_input:
-                    print("Could not parse action")
-                    break
+            if not action or not action_input:
+                print("Could not determine a valid action")
+                break
 
-                #Act
-                print("\nAction: ")
-                print(action)
+            print("\nAction: ", action)
+            print("Action input: ", action_input)
 
-                print("\n Action input: ")
-                print(action_input)
+            result = self.execute(action=action, action_input=action_input)
 
-                result=self.execute(action=action,action_input=action_input)
+            print("\nObservation: ", result)
+            self.observe(result=result)
 
-                #observe
-
-                print("\nObservation: ")
-                Observe = self.generate_final_response()
-                print(Observe)
-
-                self.observe(result)
-                
-
-            print("The agent reached the maximum steps")
-
+        print("The agent reached the maximum steps")
+        return self.generate_final_response()
 def main():
     history = []
     print("="*50)
@@ -537,8 +533,8 @@ def main():
     while True:
         try:
             print("Please choose your mood")
-            print("1. Normal AI tutor")
-            print("2. Advanced AI tutor")
+            print("1. Advanced AI tutor")
+            print("2. Normal AI tutor")
             print("Type 'exit' to quit")
             choice=input("Enter the mode of your choices: ").strip()
             if not choice.strip():

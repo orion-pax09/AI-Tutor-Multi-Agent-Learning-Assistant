@@ -12,20 +12,18 @@ A command-line AI tutor built on Google's Gemini API. It doesn't just answer que
 This project was built to actually learn how LLM agents work under the hood and real tool calling, reasoning loops, and multi-step workflows — rather than just wrapping a chat API and calling it done.
 
 # What it can do
-# -----------------------------------------------------------------------------------------------------
-# 1. Direct Q&A tutoring	Ask a concept question, get a clear, patient explanation — no tool needed.
-# 2. Live weather	"What's the weather in Lahore?" → pulls real current data from OpenWeatherMap.
-# 3. Live web search	"What's the latest on X?" → searches the web via Tavily and summarizes what it finds.
-# 4. YouTube lookup	"Find me a tutorial on X" → returns real, clickable video results.
-# 5. Calculator	Handles math on the fly by evaluating the expression, not guessing at it.
-# 6. Date & time	Answers "what time is it" accurately, every time.
-# 7. ReAct research agent	A separate reasoning agent that thinks, acts, and observes in a loop until it's confident in its answer.
-# 8. Conversation memory	Remembers what you talked about earlier so follow-up questions make sense.
-# 9. Automatic retries	If Gemini is rate-limited or temporarily down, it waits and retries instead of failing outright.
+
+1. Direct Q&A tutoring	Ask a concept question, get a clear, patient explanation — no tool needed.
+2. Live weather	"What's the weather in Lahore?" → pulls real current data from OpenWeatherMap.
+3. Live web search	"What's the latest on X?" → searches the web via Tavily and summarizes what it finds.
+4. YouTube lookup	"Find me a tutorial on X" → returns real, clickable video results.
+5. Calculator	Handles math on the fly by evaluating the expression, not guessing at it.
+6. Date & time	Answers "what time is it" accurately, every time.
+7. ReAct research agent	A separate reasoning agent that thinks, acts, and observes in a loop until it's confident in its answer.
+8. Conversation memory	Remembers what you talked about earlier so follow-up questions make sense.
+9. Automatic retries	If Gemini is rate-limited or temporarily down, it waits and retries instead of failing outright.
 
 # How it actually works (step by step)
-# -----------------------------------------------------------------------------------------------------
-
 If you're curious what's happening behind the terminal prompt, here's the honest, plain-English breakdown.
 
 1. You type something in
@@ -173,3 +171,7 @@ If you're not sure whether an idea fits, open an issue first and let's talk it t
 Why this exists
 
 This was built to genuinely understand how LLM-based agents work — reasoning, tool selection, function calling, multi-step loops — by building all of it from scratch instead of relying on a pre-built agent framework. If you're learning the same things, feel free to poke around, break it, fix it, or build on top of it.
+
+## Author
+**Muhammad Hamza Khan**
+BS Software Engineering

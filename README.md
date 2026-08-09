@@ -173,5 +173,9 @@ Why this exists
 This was built to genuinely understand how LLM-based agents work — reasoning, tool selection, function calling, multi-step loops — by building all of it from scratch instead of relying on a pre-built agent framework. If you're learning the same things, feel free to poke around, break it, fix it, or build on top of it.
 
 ## Author
+
 **Muhammad Hamza Khan**
-BS Software Engineering
+
+Built with Python, Google Gemini, and various APIs.
+
+:)

@@ -441,7 +441,6 @@ class ReAct_agent:
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            # fallback: strip accidental markdown fences if the model adds them anyway
             cleaned = text.replace("```json", "").replace("```", "").strip()
             try:
                 return json.loads(cleaned)
@@ -579,11 +578,12 @@ def main():
                 print("\n" + "="*50)
                 print("Final answer")
                 print("="*50 , end="")
-                print(final_answer)
+                print("\n",final_answer)
                 continue
             else:
                 print("Enter 1 to enter norma AI tutor")
                 print("Enter 2 to enter advanced AI tutor")
+                continue
 
             history.append(types.Content(role="user",
                                              parts= [types.Part.from_text(text=prompt)]))

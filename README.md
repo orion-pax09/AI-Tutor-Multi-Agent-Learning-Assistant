@@ -11,16 +11,15 @@ A command-line AI tutor built on Google's Gemini API. It doesn't just answer que
 
 ## What it can do
 
-# Feature & Description 
-• Direct Q&A tutoring:- Ask a concept question, get a clear, patient explanation — no tool needed.
-• Live weather:- "What's the weather in Lahore?" → pulls real current data from OpenWeatherMap. 
-• Live web search:-"What's the latest on X?" → searches the web via Tavily and summarizes what it finds. 
-• YouTube lookup:- "Find me a tutorial on X" → returns real, clickable video results. 
-• Calculator:- Handles math on the fly by evaluating the expression, not guessing at it. 
-• Date & time:- Answers "what time is it" accurately, every time. 
-• ReAct research agent:- A separate reasoning agent that thinks, acts, and observes in a loop until it's confident in its answer. 
-• Conversation memory:-  Remembers what you talked about earlier so follow-up questions make sense. 
-• Automatic retries:- If Gemini is rate-limited or temporarily down, it waits and retries instead of failing outright. 
+- **Direct Q&A tutoring** — Ask a concept question, get a clear, patient explanation — no tool needed.
+- **Live weather** — "What's the weather in Lahore?" → pulls real current data from OpenWeatherMap.
+- **Live web search** — "What's the latest on X?" → searches the web via Tavily and summarizes what it finds.
+- **YouTube lookup** — "Find me a tutorial on X" → returns real, clickable video results.
+- **Calculator** — Handles math on the fly by evaluating the expression, not guessing at it.
+- **Date & time** — Answers "what time is it" accurately, every time.
+- **ReAct research agent** — A separate reasoning agent that thinks, acts, and observes in a loop until it's confident in its answer.
+- **Conversation memory** — Remembers what you talked about earlier so follow-up questions make sense.
+- **Automatic retries** — If Gemini is rate-limited or temporarily down, it waits and retries instead of failing outright.
 
 ## Motivation
 
